@@ -1,2 +1,3 @@
 # MultyplayerUnityLernMirror
- Попытка реализовать простейший мультиплеер
+ Pchelincev Dmitriy(Пчелинцев Дмитрий)
+
