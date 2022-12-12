@@ -85,7 +85,7 @@
                     "id": "7a9d413d-b534-4c59-935d-a10156948918",
                     "path": "<Mouse>/delta",
                     "interactions": "",
-                    "processors": "",
+                    "processors": "ScaleVector2(x=0.35,y=0.35)",
                     "groups": "",
                     "action": "Rotate",
                     "isComposite": false,

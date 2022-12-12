@@ -3,23 +3,23 @@ using UnityEngine;
 
 public class NetworkUI : MonoBehaviour
 {
-    [SerializeField] private NetworkManager _manager;
+    private NetworkManager networkManager => NetworkManager.singleton;
 
     public void OnConnectClick()
     {
-        _manager.StartClient();
+        networkManager.StartClient();
         HideInteface();
     }
 
     public void OnHostClick()
     {
-        _manager.StartHost();
+        networkManager.StartHost();
         HideInteface();
     }
 
     public void OnIpChanged(string newIP)
     {
-        _manager.networkAddress = newIP;
+        networkManager.networkAddress = newIP;
     }
 
     private void HideInteface()
