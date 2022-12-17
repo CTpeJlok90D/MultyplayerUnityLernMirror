@@ -12,7 +12,7 @@ public class NicknameLabel : MonoBehaviour
     private void Update()
     {
         transform.position = _owner.transform.position + _offcet;
-        transform.forward = Camera.main.transform.position;
+        transform.forward = Camera.main.transform.position - transform.position;
         _label.text = _owner.Nickname;
     }
 

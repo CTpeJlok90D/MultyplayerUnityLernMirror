@@ -13,7 +13,7 @@ public class LocalCamera : MonoBehaviour
     {
         if (_owner.IsLocalPlayer == false)
         {
-            gameObject.SetActive(false);
+            Destroy(this.gameObject);
         }
     }
 }

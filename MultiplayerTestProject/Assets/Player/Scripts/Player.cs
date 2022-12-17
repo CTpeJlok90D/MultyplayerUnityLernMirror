@@ -12,15 +12,26 @@ public class Player : NetworkBehaviour
     [SerializeField] private Vector2 _maxCameraRotaion;
     [SerializeField] private Vector2 _minCameraRotation;
 
-    private Vector3 _currentMoveDirection;
-    private Vector3 _currentRotateOffcet;
+    [SyncVar]
+    private Vector3 _currentMoveDirection = Vector3.zero;
+    [SyncVar]
+    private Vector3 _currentRotateOffcet = Vector3.zero;
+    [SyncVar]
+    private Quaternion _currentRotateValue = Quaternion.identity;
 
     public string Nickname => _nickname;
     public bool IsLocalPlayer => isLocalPlayer;
+    public Vector3 CurrentMoveDirection => _currentMoveDirection;
 
     #region Network Set Commands
     [Command]
     private void CommmandSetMoveDirection(Vector2 direction)
+    {
+        _currentMoveDirection = new Vector3(direction.x, 0, direction.y);
+        ClientPRCSetMoveDirection(direction);
+    }
+    [ClientRpc]
+    private void ClientPRCSetMoveDirection(Vector2 direction)
     {
         _currentMoveDirection = new Vector3(direction.x, 0, direction.y);
     }
@@ -29,10 +40,22 @@ public class Player : NetworkBehaviour
     private void CommandSetCurrentOffcet(Vector2 mouseOffcet)
     {
         _currentRotateOffcet = mouseOffcet;
+        ClientRpcSetCurrentOffcet(mouseOffcet);
+    }
+    [ClientRpc]
+    private void ClientRpcSetCurrentOffcet(Vector2 mouseOffcet)
+    {
+        _currentRotateOffcet = mouseOffcet;
     }
 
-    [Command(requiresAuthority = false)]
+    [Command]
     public void CommandSetNickname(string nickname)
+    {
+        _nickname = nickname;
+        ClientRPCSetNickname(nickname);
+    }
+    [ClientRpc]
+    private void ClientRPCSetNickname(string nickname)
     {
         _nickname = nickname;
     }
@@ -50,11 +73,11 @@ public class Player : NetworkBehaviour
 
     public void Start()
     {
-        if ((isLocalPlayer && isClient) == false)
+        if (isLocalPlayer && isClient)
         {
-            return;
+            CommandSetNickname(PlayerPrefs.GetString("nickname"));
         }
-        CommandSetNickname(PlayerPrefs.GetString("nickname"));
+        _shouders.transform.rotation = _currentRotateValue;
     }
 
     public void OnMouseMove(InputAction.CallbackContext context)
@@ -71,11 +94,13 @@ public class Player : NetworkBehaviour
     {
         Move(_currentMoveDirection);
         Rotate(_currentRotateOffcet);
+        _currentRotateValue = _shouders.transform.rotation;
     }
 
     private void Move(Vector3 direction)
     {
-        _charancterController.Move(Camera.main.transform.TransformDirection(new Vector3(direction.x, 0, direction.z)) * _moveSpeed * Time.fixedDeltaTime);
+        Vector3 moveDirection = _shouders.TransformDirection(direction);
+        _charancterController.Move(new Vector3(moveDirection.x, 0, moveDirection.z).normalized  * _moveSpeed * Time.fixedDeltaTime);
     }
 
     private void Rotate(Vector2 offcet)

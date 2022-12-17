@@ -8,26 +8,14 @@ public class PlayerAnimation : MonoBehaviour
     [SerializeField] private Transform _shoulders;
     [SerializeField] private Player _owner;
 
-    private InputAction.CallbackContext _currentContext;
-
-    private bool _isMoving => _currentContext.started || _currentContext.performed;
-
-    public void OnMove(InputAction.CallbackContext context)
-    {
-        if (_owner.IsLocalPlayer == false)
-        {
-            return;
-        }
-        _currentContext = context;
-        _animator.SetBool("Running", _isMoving);
-    }
+    private bool _isMoving => _owner.CurrentMoveDirection != Vector3.zero;
 
     public void LateUpdate()
     {
-        if ((_isMoving && _owner.IsLocalPlayer) == false)
+        _animator.SetBool("Running", _isMoving);
+        if (_isMoving)
         {
-            return;
+            _playerView.rotation = Quaternion.Euler(new Vector3(_playerView.eulerAngles.x, _shoulders.eulerAngles.y, _playerView.eulerAngles.z));
         }
-        _playerView.rotation = Quaternion.Euler(new Vector3(_playerView.eulerAngles.x, _shoulders.eulerAngles.y, _playerView.eulerAngles.z));
     }
 }
