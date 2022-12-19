@@ -12,17 +12,19 @@ public class Player : NetworkBehaviour
     [SerializeField] private Vector2 _maxCameraRotaion;
     [SerializeField] private Vector2 _minCameraRotation;
 
-    [SyncVar]
-    private Vector3 _currentMoveDirection = Vector3.zero;
-    [SyncVar]
-    private Vector3 _currentRotateOffcet = Vector3.zero;
-    [SyncVar]
-    private Quaternion _currentRotateValue = Quaternion.identity;
+    [SyncVar] private Vector3 _currentMoveDirection = Vector3.zero;
+    [SyncVar] private Vector3 _currentRotateOffcet = Vector3.zero;
+    [SyncVar] private Quaternion _currentLookRotate = Quaternion.identity;
+    [SyncVar] private bool _canMove = true;
 
     public string Nickname => _nickname;
     public bool IsLocalPlayer => isLocalPlayer;
-    public Vector3 CurrentMoveDirection => _currentMoveDirection;
-
+    public Vector3 CurrentMoveDirection => new Vector3(_shouders.TransformDirection(_currentMoveDirection).x, 0, _shouders.TransformDirection(_currentMoveDirection).z);
+    public Transform Shoulders => _shouders;
+    public bool IsMoving => CurrentMoveDirection != Vector3.zero;
+    public bool CanMove => _canMove;
+    public Quaternion CurrentLookRotate => _currentLookRotate;
+ 
     #region Network Set Commands
     [Command]
     private void CommmandSetMoveDirection(Vector2 direction)
@@ -37,15 +39,17 @@ public class Player : NetworkBehaviour
     }
 
     [Command]
-    private void CommandSetCurrentOffcet(Vector2 mouseOffcet)
+    private void CommandSetCurrentMouseOffcet(Vector2 mouseOffcet, Quaternion shoulders)
     {
         _currentRotateOffcet = mouseOffcet;
-        ClientRpcSetCurrentOffcet(mouseOffcet);
+        _currentLookRotate = shoulders;
+        ClientRpcSetCurrentOffcet(mouseOffcet, shoulders);
     }
     [ClientRpc]
-    private void ClientRpcSetCurrentOffcet(Vector2 mouseOffcet)
+    private void ClientRpcSetCurrentOffcet(Vector2 mouseOffcet, Quaternion shoulders)
     {
         _currentRotateOffcet = mouseOffcet;
+        _currentLookRotate = shoulders;
     }
 
     [Command]
@@ -59,11 +63,32 @@ public class Player : NetworkBehaviour
     {
         _nickname = nickname;
     }
+    [Command]
+    public void CommandSetCanMove(bool value)
+    {
+        _canMove = value;
+        ClientRrpcSetCanMove(value);
+    }
+    [ClientRpc]
+    private void ClientRrpcSetCanMove(bool value)
+    {
+        _canMove = value;
+    }
+    [Command]
+    private void CommandSetCurrentLookRotate()
+    {
+        ClientRpcSetCurrentLookRotate(_currentLookRotate);
+    }
+    [ClientRpc]
+    private void ClientRpcSetCurrentLookRotate(Quaternion rotatinon)
+    {
+        Shoulders.rotation = rotatinon;
+    }
     #endregion
 
     public void OnMove(InputAction.CallbackContext context)
     {
-        if (isClient && isLocalPlayer)
+        if (isClient && isLocalPlayer && CanMove)
         {
             Vector3 inputInfo = context.ReadValue<Vector2>();
             CommmandSetMoveDirection(inputInfo);
@@ -71,13 +96,13 @@ public class Player : NetworkBehaviour
         }
     }
 
-    public void Start()
+    public override void OnStartClient()
     {
         if (isLocalPlayer && isClient)
         {
             CommandSetNickname(PlayerPrefs.GetString("nickname"));
         }
-        _shouders.transform.rotation = _currentRotateValue;
+        CommandSetCurrentLookRotate();
     }
 
     public void OnMouseMove(InputAction.CallbackContext context)
@@ -85,22 +110,20 @@ public class Player : NetworkBehaviour
         if (isClient && isLocalPlayer)
         {
             Vector2 mouseOffcet = context.ReadValue<Vector2>();
-            CommandSetCurrentOffcet(mouseOffcet);
+            CommandSetCurrentMouseOffcet(mouseOffcet, _shouders.rotation);
             _currentRotateOffcet = mouseOffcet;
         }
     }
 
-    private void FixedUpdate()
+    private void Update()
     {
-        Move(_currentMoveDirection);
+        Move(CurrentMoveDirection, Time.deltaTime);
         Rotate(_currentRotateOffcet);
-        _currentRotateValue = _shouders.transform.rotation;
     }
 
-    private void Move(Vector3 direction)
-    {
-        Vector3 moveDirection = _shouders.TransformDirection(direction);
-        _charancterController.Move(new Vector3(moveDirection.x, 0, moveDirection.z).normalized  * _moveSpeed * Time.fixedDeltaTime);
+    private void Move(Vector3 direction, float delta)
+    {   
+        _charancterController.Move(new Vector3(direction.x, 0, direction.z).normalized  * _moveSpeed * delta);
     }
 
     private void Rotate(Vector2 offcet)
