@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 public class PlayerView : MonoBehaviour
@@ -8,7 +7,7 @@ public class PlayerView : MonoBehaviour
     [SerializeField] private Transform _shoulders;
     [SerializeField] private Player _owner;
 
-    public void LateUpdate()
+    private void LateUpdate()
     {
         _animator.SetBool("Running", _owner.IsMoving);
         if (_owner.IsMoving)

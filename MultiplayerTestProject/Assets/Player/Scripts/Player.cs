@@ -1,6 +1,8 @@
 using UnityEngine;
 using Mirror;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
+using UnityEngine.Events;
 
 public class Player : NetworkBehaviour
 {
@@ -16,6 +18,15 @@ public class Player : NetworkBehaviour
     [SyncVar] private Vector3 _currentRotateOffcet = Vector3.zero;
     [SyncVar] private Quaternion _currentLookRotate = Quaternion.identity;
     [SyncVar] private bool _canMove = true;
+
+    private static List<Player> _list = new();
+    private static UnityEvent<Player> _someConnected = new();
+    private static UnityEvent<Player> _someDisconected = new();
+    public static List<Player> List => new(_list);
+    public static UnityEvent<Player> SomeConnected => _someConnected;
+    public static UnityEvent<Player> SomeDisconected => _someDisconected;
+    
+
 
     public string Nickname => _nickname;
     public bool IsLocalPlayer => isLocalPlayer;
@@ -96,23 +107,38 @@ public class Player : NetworkBehaviour
         }
     }
 
-    public override void OnStartClient()
+    public void Start()
     {
-        if (isLocalPlayer && isClient)
+        if (!isLocalPlayer || !isClient)
         {
-            CommandSetNickname(PlayerPrefs.GetString("nickname"));
+            return;
         }
+        CommandSetNickname(PlayerPrefs.GetString("nickname"));
         CommandSetCurrentLookRotate();
+        _shouders.transform.rotation = _currentLookRotate;
+        _someConnected.Invoke(this);
+    }
+
+    private void OnEnable()
+    {
+        _list.Add(this);
+    }
+
+    public override void OnStopClient()
+    {
+        _list.Remove(this);
+        _someDisconected.Invoke(this);
     }
 
     public void OnMouseMove(InputAction.CallbackContext context)
     {
-        if (isClient && isLocalPlayer)
+        if (!isClient || !isLocalPlayer)
         {
-            Vector2 mouseOffcet = context.ReadValue<Vector2>();
-            CommandSetCurrentMouseOffcet(mouseOffcet, _shouders.rotation);
-            _currentRotateOffcet = mouseOffcet;
+            return;
         }
+        Vector2 mouseOffcet = context.ReadValue<Vector2>();
+        CommandSetCurrentMouseOffcet(mouseOffcet, _shouders.rotation);
+        _currentRotateOffcet = mouseOffcet;
     }
 
     private void Update()
@@ -128,22 +154,32 @@ public class Player : NetworkBehaviour
 
     private void Rotate(Vector2 offcet)
     {
-        Vector3 newRotate = new Vector3(offcet.y + _shouders.transform.eulerAngles.x, offcet.x + _shouders.transform.eulerAngles.y, 0);
-        for (int i = 0; i < 2; i++)
+        if (isClient == false)
         {
-            if (newRotate[i] < 180 && newRotate[i] > _maxCameraRotaion[i])
-            {
-                newRotate[i] = _maxCameraRotaion[i];
-            }
-        } 
-        for (int i = 0; i < 2; i++)
-        {
-            if (newRotate[i] > 180 && newRotate[i] < _minCameraRotation[i])
-            {
-                newRotate[i] = _minCameraRotation[i];
-            }
+            return;
         }
-        _shouders.transform.rotation = Quaternion.Euler(newRotate);
+        if (isLocalPlayer)
+        {
+
+            Vector3 newRotate = new Vector3(offcet.y + _shouders.transform.eulerAngles.x, offcet.x + _shouders.transform.eulerAngles.y, 0);
+            for (int i = 0; i < 2; i++)
+            {
+                if (newRotate[i] < 180 && newRotate[i] > _maxCameraRotaion[i])
+                {
+                    newRotate[i] = _maxCameraRotaion[i];
+                }
+            }
+            for (int i = 0; i < 2; i++)
+            {
+                if (newRotate[i] > 180 && newRotate[i] < _minCameraRotation[i])
+                {
+                    newRotate[i] = _minCameraRotation[i];
+                }
+            }
+            _shouders.transform.rotation = Quaternion.Euler(newRotate);
+            return;
+        }
+        _shouders.transform.rotation = _currentLookRotate;
     }
 
     private void OnValidate()

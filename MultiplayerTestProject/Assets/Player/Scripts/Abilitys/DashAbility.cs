@@ -30,13 +30,13 @@ public class DashAbility : NetworkBehaviour, IAbility
     }
     #endregion
 
-    private void Start()
+    private void OnEnable()
     {
-        if (isServer == false)
-        {
-            return;
-        }
         _dashTrigger.Enter.AddListener(Hit);
+    }
+    private void OnDisable()
+    {
+        _dashTrigger.Enter.RemoveListener(Hit);
     }
 
     public void Hit(Collider other)
